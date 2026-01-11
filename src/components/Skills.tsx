@@ -1,4 +1,4 @@
-import { motion, useInView, useTransform, useMotionValue } from 'framer-motion'
+import { motion, useInView, useTransform, useMotionValue, MotionValue } from 'framer-motion'
 import { useRef, useEffect } from 'react'
 import { skillsData } from '../data/skillsData'
 
@@ -402,8 +402,28 @@ const Skills = ({ darkMode = false }: SkillsProps) => {
   )
 }
 
-const SkillOrbit = ({ skill, index, total, rotation, radiusX, radiusY, darkMode, isInView }: any) => {
-  const position = useTransform(rotation, (r) => {
+interface SkillOrbitProps {
+  skill: any; // Replace with your skill type
+  index: number;
+  total: number;
+  rotation: MotionValue<number>; // Key fix here
+  radiusX: number;
+  radiusY: number;
+  darkMode: boolean;
+  isInView: boolean;
+}
+
+const SkillOrbit = ({ 
+  skill, 
+  index, 
+  total, 
+  rotation, 
+  radiusX, 
+  radiusY, 
+  darkMode, 
+  isInView 
+}: SkillOrbitProps) => {
+  const position = useTransform(rotation, (r : number) => {
     const angle = (index / total) * Math.PI * 2 + r * (Math.PI / 180)
     return {
       x: Math.cos(angle) * radiusX,

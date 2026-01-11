@@ -8,6 +8,7 @@ export interface Experience {
   endDate: string | 'Present'
   description: string
   achievements: string[]
+  highlights?: string[]
   technologies: string[]
   metrics?: {
     label: string

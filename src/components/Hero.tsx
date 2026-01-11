@@ -7,7 +7,8 @@ interface HeroProps {
 
 // Tech Stack Icons
 const TechIcon = ({ name, darkMode }: { name: string; darkMode: boolean }) => {
-  const icons: { [key: string]: JSX.Element } = {
+  const icons: { [key: string]: React.JSX.Element } = {
+
     React: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
         <circle cx="12" cy="12" r="1.5"/>
@@ -177,7 +178,7 @@ const Hero = ({ darkMode = false }: HeroProps) => {
       y: 0,
       transition: {
         duration: 0.6,
-        ease: [0.22, 1, 0.36, 1]
+        ease: [0.22, 1, 0.36, 1] as const 
       }
     }
   }
