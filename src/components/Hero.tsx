@@ -87,7 +87,7 @@ const TechIcon = memo(({ name, darkMode }: { name: string; darkMode: boolean }) 
 
 // ✅ OPTIMIZATION 2: Move static data outside component
 const HERO_STATS = [
-  { number: '11+', label: 'Months Exp' },
+  { number: '2+', label: 'Years Exp' },
   { number: '10+', label: 'Projects' },
   { number: '15+', label: 'Tech Stack' },
 ] as const
