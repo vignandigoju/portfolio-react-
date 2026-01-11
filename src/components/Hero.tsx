@@ -1,95 +1,124 @@
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, memo, useCallback } from 'react'
 
 interface HeroProps {
   darkMode?: boolean
 }
 
-// Tech Stack Icons
-const TechIcon = ({ name, darkMode }: { name: string; darkMode: boolean }) => {
-  const icons: { [key: string]: React.JSX.Element } = {
-
-    React: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <circle cx="12" cy="12" r="1.5"/>
-        <ellipse cx="12" cy="12" rx="3" ry="11" transform="rotate(60 12 12)"/>
-        <ellipse cx="12" cy="12" rx="3" ry="11" transform="rotate(-60 12 12)"/>
-        <ellipse cx="12" cy="12" rx="11" ry="3"/>
-      </svg>
-    ),
-    TypeScript: (
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        <rect width="22" height="22" x="1" y="1" rx="3"/>
-        <path d="M15.5 16.5h-2v-5h2v5zm-3-6.5v-1h-5v1h2v5h1v-5h2z" fill={darkMode ? "#000" : "#fff"}/>
-      </svg>
-    ),
-    Python: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M9 3h6a6 6 0 0 1 0 12H9a6 6 0 0 1 0-12z"/>
-        <path d="M9 9h6m-6 6h6"/>
-        <circle cx="9" cy="6" r="1" fill="currentColor"/>
-        <circle cx="15" cy="18" r="1" fill="currentColor"/>
-      </svg>
-    ),
-    FastAPI: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M13 3l8 8-8 8M11 21l-8-8 8-8"/>
-        <path d="M6 12h12"/>
-      </svg>
-    ),
-    MySQL: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <rect x="4" y="4" width="16" height="16" rx="2"/>
-        <path d="M8 10h8M8 14h5"/>
-        <circle cx="17" cy="17" r="1" fill="currentColor"/>
-      </svg>
-    ),
-    MongoDB: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M12 3c-1.5 0-4 4-4 9s2.5 9 4 9 4-4 4-9-2.5-9-4-9z"/>
-        <path d="M12 3v18"/>
-      </svg>
-    ),
-    LangChain: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <circle cx="8" cy="8" r="3"/>
-        <circle cx="16" cy="16" r="3"/>
-        <path d="M10 10l4 4M8 11v6a2 2 0 0 0 2 2h6"/>
-      </svg>
-    ),
-    OpenAI: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-        <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-      </svg>
-    ),
-    Docker: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <rect x="4" y="8" width="3" height="3"/>
-        <rect x="8" y="8" width="3" height="3"/>
-        <rect x="12" y="8" width="3" height="3"/>
-        <rect x="8" y="12" width="3" height="3"/>
-        <path d="M4 8V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/>
-      </svg>
-    ),
-    Git: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <circle cx="12" cy="12" r="2"/>
-        <circle cx="6" cy="18" r="2"/>
-        <circle cx="18" cy="6" r="2"/>
-        <line x1="12" y1="14" x2="6" y2="16"/>
-        <line x1="12" y1="10" x2="18" y2="8"/>
-      </svg>
-    ),
-  }
-  return icons[name] || null
+// ✅ OPTIMIZATION 1: Move TechIcon outside + memoize to prevent recreation
+const TECH_ICONS: { [key: string]: (darkMode: boolean) => React.JSX.Element } = {
+  React: (darkMode) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="12" cy="12" r="1.5"/>
+      <ellipse cx="12" cy="12" rx="3" ry="11" transform="rotate(60 12 12)"/>
+      <ellipse cx="12" cy="12" rx="3" ry="11" transform="rotate(-60 12 12)"/>
+      <ellipse cx="12" cy="12" rx="11" ry="3"/>
+    </svg>
+  ),
+  TypeScript: (darkMode) => (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <rect width="22" height="22" x="1" y="1" rx="3"/>
+      <path d="M15.5 16.5h-2v-5h2v5zm-3-6.5v-1h-5v1h2v5h1v-5h2z" fill={darkMode ? "#000" : "#fff"}/>
+    </svg>
+  ),
+  Python: (darkMode) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M9 3h6a6 6 0 0 1 0 12H9a6 6 0 0 1 0-12z"/>
+      <path d="M9 9h6m-6 6h6"/>
+      <circle cx="9" cy="6" r="1" fill="currentColor"/>
+      <circle cx="15" cy="18" r="1" fill="currentColor"/>
+    </svg>
+  ),
+  FastAPI: (darkMode) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M13 3l8 8-8 8M11 21l-8-8 8-8"/>
+      <path d="M6 12h12"/>
+    </svg>
+  ),
+  MySQL: (darkMode) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="4" y="4" width="16" height="16" rx="2"/>
+      <path d="M8 10h8M8 14h5"/>
+      <circle cx="17" cy="17" r="1" fill="currentColor"/>
+    </svg>
+  ),
+  MongoDB: (darkMode) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M12 3c-1.5 0-4 4-4 9s2.5 9 4 9 4-4 4-9-2.5-9-4-9z"/>
+      <path d="M12 3v18"/>
+    </svg>
+  ),
+  LangChain: (darkMode) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="8" cy="8" r="3"/>
+      <circle cx="16" cy="16" r="3"/>
+      <path d="M10 10l4 4M8 11v6a2 2 0 0 0 2 2h6"/>
+    </svg>
+  ),
+  OpenAI: (darkMode) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+      <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+    </svg>
+  ),
+  Docker: (darkMode) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="4" y="8" width="3" height="3"/>
+      <rect x="8" y="8" width="3" height="3"/>
+      <rect x="12" y="8" width="3" height="3"/>
+      <rect x="8" y="12" width="3" height="3"/>
+      <path d="M4 8V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/>
+    </svg>
+  ),
+  Git: (darkMode) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="12" cy="12" r="2"/>
+      <circle cx="6" cy="18" r="2"/>
+      <circle cx="18" cy="6" r="2"/>
+      <line x1="12" y1="14" x2="6" y2="16"/>
+      <line x1="12" y1="10" x2="18" y2="8"/>
+    </svg>
+  ),
 }
+
+const TechIcon = memo(({ name, darkMode }: { name: string; darkMode: boolean }) => {
+  return TECH_ICONS[name]?.(darkMode) || null
+})
+
+// ✅ OPTIMIZATION 2: Move static data outside component
+const HERO_STATS = [
+  { number: '11+', label: 'Months Exp' },
+  { number: '10+', label: 'Projects' },
+  { number: '15+', label: 'Tech Stack' },
+] as const
+
+const ORBITAL_RINGS = [
+  { radius: 115, duration: 20 },
+  { radius: 175, duration: 30 },
+  { radius: 235, duration: 40 },
+] as const
+
+const INNER_RING_INSETS = [12, 18] as const
+
+const ROLES = ['Software Developer', 'AI Engineer', 'Full Stack Developer'] as const
+
+const TECH_STACK = [
+  { name: 'Python', radius: 115, speed: 0.5, offset: 0 },
+  { name: 'React', radius: 115, speed: 0.5, offset: Math.PI / 2 },
+  { name: 'TypeScript', radius: 115, speed: 0.5, offset: Math.PI },
+  { name: 'FastAPI', radius: 115, speed: 0.5, offset: (3 * Math.PI) / 2 },
+  { name: 'LangChain', radius: 175, speed: 0.4, offset: Math.PI / 4 },
+  { name: 'OpenAI', radius: 175, speed: 0.4, offset: (3 * Math.PI) / 4 },
+  { name: 'MongoDB', radius: 175, speed: 0.4, offset: (5 * Math.PI) / 4 },
+  { name: 'MySQL', radius: 175, speed: 0.4, offset: (7 * Math.PI) / 4 },
+  { name: 'Docker', radius: 235, speed: 0.3, offset: 0 },
+  { name: 'Git', radius: 235, speed: 0.3, offset: Math.PI },
+] as const
 
 const Hero = ({ darkMode = false }: HeroProps) => {
   const [hoveredTech, setHoveredTech] = useState<string | null>(null)
   const [orbitTime, setOrbitTime] = useState(0)
 
-  // Mouse tracking for 3D tilt
   const mouseX = useMotionValue(0)
   const mouseY = useMotionValue(0)
 
@@ -102,7 +131,7 @@ const Hero = ({ darkMode = false }: HeroProps) => {
     damping: 25
   })
 
-  // Continuous orbit animation - optimized
+  // Continuous orbit animation
   useEffect(() => {
     let animationFrameId: number
 
@@ -116,14 +145,14 @@ const Hero = ({ darkMode = false }: HeroProps) => {
   }, [])
 
   // Typing animation
-  const roles = ['Software Developer', 'AI Engineer', 'Full Stack Developer']
   const [currentRole, setCurrentRole] = useState(0)
   const [displayText, setDisplayText] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // ✅ OPTIMIZATION 3: Fix dependency array - add roles to deps
   useEffect(() => {
     const timeout = setTimeout(() => {
-      const currentText = roles[currentRole]
+      const currentText = ROLES[currentRole]
       
       if (!isDeleting) {
         if (displayText !== currentText) {
@@ -134,7 +163,7 @@ const Hero = ({ darkMode = false }: HeroProps) => {
       } else {
         if (displayText === '') {
           setIsDeleting(false)
-          setCurrentRole((prev) => (prev + 1) % roles.length)
+          setCurrentRole((prev) => (prev + 1) % ROLES.length)
         } else {
           setDisplayText(currentText.slice(0, displayText.length - 1))
         }
@@ -142,25 +171,10 @@ const Hero = ({ darkMode = false }: HeroProps) => {
     }, isDeleting ? 50 : 100)
 
     return () => clearTimeout(timeout)
-  }, [displayText, isDeleting, currentRole])
+  }, [displayText, isDeleting, currentRole]) // roles is now a constant
 
-  // Tech stack configuration
-  const techStack = [
-    { name: 'Python', radius: 115, speed: 0.5, offset: 0 },
-    { name: 'React', radius: 115, speed: 0.5, offset: Math.PI / 2 },
-    { name: 'TypeScript', radius: 115, speed: 0.5, offset: Math.PI },
-    { name: 'FastAPI', radius: 115, speed: 0.5, offset: (3 * Math.PI) / 2 },
-    
-    { name: 'LangChain', radius: 175, speed: 0.4, offset: Math.PI / 4 },
-    { name: 'OpenAI', radius: 175, speed: 0.4, offset: (3 * Math.PI) / 4 },
-    { name: 'MongoDB', radius: 175, speed: 0.4, offset: (5 * Math.PI) / 4 },
-    { name: 'MySQL', radius: 175, speed: 0.4, offset: (7 * Math.PI) / 4 },
-    
-    { name: 'Docker', radius: 235, speed: 0.3, offset: 0 },
-    { name: 'Git', radius: 235, speed: 0.3, offset: Math.PI },
-  ]
-
-  const containerVariants = {
+  // ✅ OPTIMIZATION 4: Memoize variants to prevent recreation
+  const containerVariants = useMemo(() => ({
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -169,9 +183,9 @@ const Hero = ({ darkMode = false }: HeroProps) => {
         delayChildren: 0.2,
       }
     }
-  }
+  }), [])
 
-  const itemVariants = {
+  const itemVariants = useMemo(() => ({
     hidden: { opacity: 0, y: 30 },
     visible: {
       opacity: 1,
@@ -181,7 +195,21 @@ const Hero = ({ darkMode = false }: HeroProps) => {
         ease: [0.22, 1, 0.36, 1] as const 
       }
     }
-  }
+  }), [])
+
+  // ✅ OPTIMIZATION 5: Memoize mouse handler
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX - rect.left - rect.width / 2
+    const y = e.clientY - rect.top - rect.height / 2
+    mouseX.set(x * 0.5)
+    mouseY.set(y * 0.5)
+  }, [mouseX, mouseY])
+
+  // ✅ OPTIMIZATION 6: Memoize scroll handler
+  const handleScrollToProjects = useCallback(() => {
+    document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })
+  }, [])
 
   return (
     <section 
@@ -192,17 +220,10 @@ const Hero = ({ darkMode = false }: HeroProps) => {
         paddingTop: '5rem',
         paddingBottom: '3rem',
       }}
-      onMouseMove={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect()
-        const x = e.clientX - rect.left - rect.width / 2
-        const y = e.clientY - rect.top - rect.height / 2
-        mouseX.set(x * 0.5)
-        mouseY.set(y * 0.5)
-      }}
+      onMouseMove={handleMouseMove}
     >
       {/* CLEAN MINIMAL BACKGROUND */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Subtle gradient */}
         <div
           className="absolute inset-0"
           style={{
@@ -212,7 +233,6 @@ const Hero = ({ darkMode = false }: HeroProps) => {
           }}
         />
 
-        {/* Minimal grid - very subtle */}
         <div
           className="absolute inset-0 opacity-20"
           style={{
@@ -303,11 +323,7 @@ const Hero = ({ darkMode = false }: HeroProps) => {
               variants={itemVariants}
               className="grid grid-cols-3 gap-4 md:gap-6"
             >
-              {[
-                { number: '11+', label: 'Months Exp' },
-                { number: '10+', label: 'Projects' },
-                { number: '15+', label: 'Tech Stack' },
-              ].map((stat, i) => (
+              {HERO_STATS.map((stat, i) => (
                 <motion.div 
                   key={i} 
                   className="text-center"
@@ -334,7 +350,8 @@ const Hero = ({ darkMode = false }: HeroProps) => {
               className="flex flex-wrap gap-3 md:gap-4"
             >
               <motion.button
-                className="px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold text-sm md:text-base tracking-wide transition-all duration-300"
+                onClick={handleScrollToProjects}
+                className="px-6 md:px-8 py-3 md:py-4 rounded-xl font-bold text-sm md:text-base tracking-wide transition-all duration-300 cursor-pointer"
                 style={{
                   backgroundColor: '#FF0000',
                   color: '#FFFFFF',
@@ -364,11 +381,7 @@ const Hero = ({ darkMode = false }: HeroProps) => {
                   </motion.svg>
                 </span>
               </motion.button>
-
-              
             </motion.div>
-
-            
           </motion.div>
 
           {/* RIGHT SIDE - OPTIMIZED 3D ORBITAL SYSTEM */}
@@ -395,11 +408,7 @@ const Hero = ({ darkMode = false }: HeroProps) => {
               }}
             >
               {/* Orbital Rings */}
-              {[
-                { radius: 115, duration: 20 },
-                { radius: 175, duration: 30 },
-                { radius: 235, duration: 40 },
-              ].map((ring, i) => (
+              {ORBITAL_RINGS.map((ring, i) => (
                 <motion.div
                   key={i}
                   className="absolute rounded-full pointer-events-none transition-colors duration-700"
@@ -416,6 +425,7 @@ const Hero = ({ darkMode = false }: HeroProps) => {
                     boxShadow: darkMode
                       ? `0 0 30px rgba(255, 0, 0, ${0.2 - i * 0.04})`
                       : `0 0 20px rgba(255, 0, 0, ${0.15 - i * 0.03})`,
+                    willChange: 'transform',
                   }}
                   animate={{
                     rotate: i % 2 === 0 ? [0, 360] : [360, 0],
@@ -440,6 +450,7 @@ const Hero = ({ darkMode = false }: HeroProps) => {
                     boxShadow: darkMode
                       ? '0 0 60px rgba(255, 0, 0, 0.4)'
                       : '0 0 40px rgba(255, 0, 0, 0.25)',
+                    willChange: 'transform',
                   }}
                   animate={{
                     scale: [1, 1.05, 1],
@@ -451,13 +462,14 @@ const Hero = ({ darkMode = false }: HeroProps) => {
                   }}
                 >
                   {/* Rotating inner rings */}
-                  {[12, 18].map((inset, idx) => (
+                  {INNER_RING_INSETS.map((inset, idx) => (
                     <motion.div
                       key={idx}
                       className="absolute rounded-full border-2 transition-colors duration-700"
                       style={{
                         inset: inset,
-                        borderColor: darkMode ? 'rgba(255, 0, 0, 0.4)' : 'rgba(255, 0, 0, 0.3)' ,
+                        borderColor: darkMode ? 'rgba(255, 0, 0, 0.4)' : 'rgba(255, 0, 0, 0.3)',
+                        willChange: 'transform',
                       }}
                       animate={{
                         rotate: idx % 2 === 0 ? [0, -360] : [0, 360],
@@ -491,7 +503,7 @@ const Hero = ({ darkMode = false }: HeroProps) => {
               </div>
 
               {/* Orbiting Tech Icons - Optimized */}
-              {techStack.map((tech, i) => {
+              {TECH_STACK.map((tech, i) => {
                 const angle = orbitTime * tech.speed + tech.offset
                 const x = Math.cos(angle) * tech.radius
                 const y = Math.sin(angle) * tech.radius
@@ -530,6 +542,7 @@ const Hero = ({ darkMode = false }: HeroProps) => {
                           : darkMode
                             ? '0 6px 30px rgba(0, 0, 0, 0.6)'
                             : '0 6px 30px rgba(0, 0, 0, 0.2)',
+                        willChange: 'transform',
                       }}
                       initial={{ opacity: 0, scale: 0 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -604,6 +617,7 @@ const Hero = ({ darkMode = false }: HeroProps) => {
                     marginLeft: -50,
                     marginTop: -50,
                     border: `1px solid ${darkMode ? 'rgba(255, 0, 0, 0.2)' : 'rgba(255, 0, 0, 0.15)'}`,
+                    willChange: 'transform, opacity',
                   }}
                   animate={{
                     scale: [1, 4.5],

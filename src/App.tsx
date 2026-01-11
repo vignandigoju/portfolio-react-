@@ -6,13 +6,15 @@ import Projects from './components/Projects'
 import Skills from './components/Skills'
 import Experience from './components/Experience'
 import Contact from './components/Contact'
-import Footer from './components/Footer'
 
 function App() {
-  const [darkMode, setDarkMode] = useState<boolean>(false)
+  const [darkMode, setDarkMode] = useState<boolean>(true)  // Changed from false to true
+
 
   useEffect(() => {
-    const isDark = localStorage.getItem('darkMode') === 'true'
+    const storedMode = localStorage.getItem('darkMode')
+    // If there's a stored preference, use it; otherwise default to true (dark mode)
+    const isDark = storedMode !== null ? storedMode === 'true' : true
     setDarkMode(isDark)
     if (isDark) {
       document.documentElement.classList.add('dark')
@@ -29,12 +31,12 @@ function App() {
     <div className="min-h-screen transition-colors duration-700" style={{ backgroundColor: darkMode ? '#000000' : '#FFFFFF' }}>
       <Navbar darkMode={darkMode} toggleDarkMode={toggleDarkMode} />
       <Hero darkMode={darkMode} />
-      <About darkMode={darkMode} />  {/* ADD THIS */}
+      <About darkMode={darkMode} />
       <Projects darkMode={darkMode} />
       <Skills darkMode={darkMode} />
       <Experience darkMode={darkMode}  />
       <Contact darkMode={darkMode} />
-      <Footer />
+      /
     </div>
   )
 }

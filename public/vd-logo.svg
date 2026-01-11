@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <!-- Red to black gradient -->
+    <linearGradient id="spaceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#dc2626;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Radial gradient for depth -->
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#1a1a1a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Space background -->
+  <circle cx="50" cy="50" r="48" fill="url(#bgGrad)" />
+  
+  <!-- Stars -->
+  <circle cx="20" cy="25" r="1.5" fill="#ffffff" opacity="0.8"/>
+  <circle cx="75" cy="20" r="1" fill="#ffffff" opacity="0.6"/>
+  <circle cx="85" cy="40" r="1.2" fill="#ffffff" opacity="0.7"/>
+  <circle cx="15" cy="70" r="1" fill="#dc2626" opacity="0.8"/>
+  <circle cx="80" cy="75" r="1.5" fill="#dc2626" opacity="0.6"/>
+  
+  <!-- Simple astronaut helmet -->
+  <circle cx="50" cy="40" r="16" fill="url(#spaceGrad)" stroke="#ffffff" stroke-width="1.5"/>
+  <ellipse cx="50" cy="40" rx="10" ry="12" fill="#1a1a1a" opacity="0.3"/>
+  
+  <!-- Helmet visor reflection -->
+  <ellipse cx="47" cy="37" rx="4" ry="6" fill="#ffffff" opacity="0.4"/>
+  
+  <!-- VD text below helmet -->
+  <text x="50" y="75" font-family="system-ui, -apple-system, sans-serif" 
+        font-size="24" font-weight="700" fill="#dc2626" text-anchor="middle">VD</text>
+</svg>

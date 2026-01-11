@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 
 interface NavbarProps {
@@ -6,43 +6,52 @@ interface NavbarProps {
   toggleDarkMode: () => void
 }
 
-// Custom Icon Components
-const AboutIcon = () => (
+// ✅ OPTIMIZATION 1: Memoize icon components
+const AboutIcon = memo(() => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="8" r="4"/>
     <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
   </svg>
-)
+))
 
-const ProjectsIcon = () => (
+const ProjectsIcon = memo(() => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="3" y="3" width="18" height="18" rx="2"/>
     <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
   </svg>
-)
+))
 
-const SkillsIcon = () => (
+const SkillsIcon = memo(() => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <polygon points="12 2 2 7 12 12 22 7 12 2"/>
     <polyline points="2 17 12 22 22 17"/>
     <polyline points="2 12 12 17 22 12"/>
   </svg>
-)
+))
 
-const ExperienceIcon = () => (
+const ExperienceIcon = memo(() => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="2" y="7" width="20" height="14" rx="2"/>
     <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
     <path d="M12 7h.01"/>
   </svg>
-)
+))
 
-const ContactIcon = () => (
+const ContactIcon = memo(() => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
     <path d="M9 10h6M9 14h3"/>
   </svg>
-)
+))
+
+// ✅ OPTIMIZATION 2: Move static data outside component
+const NAV_ITEMS = [
+  { name: 'About', icon: AboutIcon, gradient: 'from-red-600 to-red-800', number: '01' },
+  { name: 'Projects', icon: ProjectsIcon, gradient: 'from-red-700 to-red-900', number: '02' },
+  { name: 'Skills', icon: SkillsIcon, gradient: 'from-red-600 to-red-800', number: '03' },
+  { name: 'Experience', icon: ExperienceIcon, gradient: 'from-red-700 to-red-900', number: '04' },
+  { name: 'Contact', icon: ContactIcon, gradient: 'from-red-600 to-red-800', number: '05' }
+] as const
 
 const Navbar = ({ darkMode, toggleDarkMode }: NavbarProps) => {
   const [isOpen, setIsOpen] = useState<boolean>(false)
@@ -53,11 +62,19 @@ const Navbar = ({ darkMode, toggleDarkMode }: NavbarProps) => {
   const { scrollY } = useScroll()
   const navbarOpacity = useTransform(scrollY, [0, 100], [0.9, 1])
 
+  // ✅ OPTIMIZATION 3: Throttle scroll handler with RAF
   useEffect(() => {
+    let ticking = false
     const handleScroll = () => {
-      setScrolled(window.scrollY > 50)
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrolled(window.scrollY > 50)
+          ticking = false
+        })
+        ticking = true
+      }
     }
-    window.addEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
@@ -73,13 +90,14 @@ const Navbar = ({ darkMode, toggleDarkMode }: NavbarProps) => {
     }
   }, [isOpen])
 
-  const navItems = [
-    { name: 'About', icon: AboutIcon, gradient: 'from-red-600 to-red-800', number: '01' },
-    { name: 'Projects', icon: ProjectsIcon, gradient: 'from-red-700 to-red-900', number: '02' },
-    { name: 'Skills', icon: SkillsIcon, gradient: 'from-red-600 to-red-800', number: '03' },
-    { name: 'Experience', icon: ExperienceIcon, gradient: 'from-red-700 to-red-900', number: '04' },
-    { name: 'Contact', icon: ContactIcon, gradient: 'from-red-600 to-red-800', number: '05' }
-  ]
+  // ✅ OPTIMIZATION 4: Memoize handlers
+  const handleMenuToggle = useCallback(() => {
+    setIsOpen(prev => !prev)
+  }, [])
+
+  const handleMenuClose = useCallback(() => {
+    setIsOpen(false)
+  }, [])
 
   return (
     <>
@@ -95,6 +113,7 @@ const Navbar = ({ darkMode, toggleDarkMode }: NavbarProps) => {
             background: darkMode 
               ? 'linear-gradient(90deg, transparent, #FF0000, transparent)'
               : 'linear-gradient(90deg, transparent, #FF0000, #3D0000, #FF0000, transparent)',
+            willChange: 'background-position',
           }}
           animate={{
             backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
@@ -123,37 +142,58 @@ const Navbar = ({ darkMode, toggleDarkMode }: NavbarProps) => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-20">
               
-              {/* Logo */}
+              {/* ✨ REDESIGNED LOGO */}
               <motion.div 
                 className="relative"
                 whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400 }}
               >
+                <motion.a
+                href="#hero"
+                className="relative flex items-center space-x-3 cursor-pointer group"
+                onMouseEnter={() => setHoveredItem('logo')}
+                onMouseLeave={() => setHoveredItem(null)}
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 400 }}
+              >
+                {/* Code Icon */}
                 <motion.div
-                  className="text-3xl font-black cursor-pointer relative flex items-center space-x-2"
-                  onMouseEnter={() => setHoveredItem('logo')}
-                  onMouseLeave={() => setHoveredItem(null)}
+                  className="relative"
+                  animate={{
+                    rotate: hoveredItem === 'logo' ? [0, -10, 10, 0] : 0,
+                  }}
+                  transition={{ duration: 0.5 }}
                 >
-                 
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="16 18 22 12 16 6" stroke="#FF0000"/>
+                    <polyline points="8 6 2 12 8 18" stroke="#FF0000"/>
+                    <line x1="12" y1="2" x2="12" y2="22" stroke="#FF0000" strokeOpacity="0.3"/>
+                  </svg>
+                </motion.div>
 
+                {/* Text */}
+                <div className="flex flex-col">
                   <motion.span
+                    className="text-xl font-black tracking-tight"
                     style={{
-                      background: 'linear-gradient(135deg, #FF0000 0%, #8B0000 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                      filter: hoveredItem === 'logo' ? 'drop-shadow(0 0 10px #FF0000)' : 'none',
-                      transition: 'filter 0.3s ease',
+                      color: darkMode ? '#FFFFFF' : '#000000',
                     }}
                   >
-                    Vignan Digoju
+                    VD
                   </motion.span>
-
-                  
-                </motion.div>
+                  <motion.div
+                    className="h-0.5 rounded-full"
+                    style={{ backgroundColor: '#FF0000' }}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: hoveredItem === 'logo' ? 1 : 0 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+              </motion.a>
                 
+                {/* Underline effect */}
                 <motion.div
-                  className="absolute -bottom-1 left-0 right-0 h-0.5"
+                  className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full"
                   style={{ backgroundColor: '#FF0000' }}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: hoveredItem === 'logo' ? 1 : 0 }}
@@ -163,7 +203,7 @@ const Navbar = ({ darkMode, toggleDarkMode }: NavbarProps) => {
 
               {/* Desktop Navigation */}
               <div className="hidden md:flex items-center space-x-1">
-                {navItems.map((item, index) => {
+                {NAV_ITEMS.map((item, index) => {
                   const IconComponent = item.icon
                   return (
                     <motion.a
@@ -256,88 +296,91 @@ const Navbar = ({ darkMode, toggleDarkMode }: NavbarProps) => {
               {/* Right Side Container */}
               <div className="flex items-center space-x-4">
                 
-                {/* Premium Toggle Switch */}
+                {/* ✨ REDESIGNED TOGGLE BUTTON */}
                 <motion.button
                   onClick={toggleDarkMode}
-                  className="relative w-20 h-10 rounded-full p-1 transition-all duration-500"
+                  className="relative w-16 h-8 rounded-full p-0.5 transition-all duration-500"
                   style={{
                     background: darkMode
-                      ? 'linear-gradient(135deg, #3D0000 0%, #1a0000 100%)'
-                      : 'linear-gradient(135deg, #e5e5e5 0%, #d4d4d4 100%)',
-                    boxShadow: darkMode
-                      ? '0 4px 15px rgba(255, 0, 0, 0.3), inset 0 2px 5px rgba(0, 0, 0, 0.5)'
-                      : '0 4px 15px rgba(0, 0, 0, 0.1), inset 0 2px 5px rgba(0, 0, 0, 0.1)',
+                      ? 'linear-gradient(135deg, #1a0000 0%, #000000 100%)'
+                      : 'linear-gradient(135deg, #fecaca 0%, #fee2e2 100%)',
+                    border: `2px solid ${darkMode ? '#FF0000' : '#dc2626'}`,
                   }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   <motion.div
-                    className="relative w-8 h-8 rounded-full flex items-center justify-center"
+                    className="w-6 h-6 rounded-full flex items-center justify-center relative z-10"
                     style={{
                       background: darkMode
                         ? 'linear-gradient(135deg, #FF0000 0%, #8B0000 100%)'
-                        : 'linear-gradient(135deg, #FFFFFF 0%, #F5F5F5 100%)',
+                        : 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
                       boxShadow: darkMode
-                        ? '0 0 20px rgba(255, 0, 0, 0.6)'
-                        : '0 2px 10px rgba(0, 0, 0, 0.2)',
+                        ? '0 0 15px rgba(255, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3)'
+                        : '0 0 10px rgba(220, 38, 38, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)',
                     }}
                     animate={{
-                      x: darkMode ? 40 : 0,
-                      rotate: darkMode ? 180 : 0,
+                      x: darkMode ? 28 : 0,
                     }}
                     transition={{
                       type: "spring",
-                      stiffness: 700,
+                      stiffness: 500,
                       damping: 30
                     }}
                   >
-                    {!darkMode && (
-                      <motion.svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#FF0000"
-                        strokeWidth="2"
-                        initial={{ scale: 0, rotate: -180 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        exit={{ scale: 0, rotate: 180 }}
-                      >
-                        <circle cx="12" cy="12" r="5"/>
-                        <line x1="12" y1="1" x2="12" y2="3"/>
-                        <line x1="12" y1="21" x2="12" y2="23"/>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                        <line x1="1" y1="12" x2="3" y2="12"/>
-                        <line x1="21" y1="12" x2="23" y2="12"/>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                      </motion.svg>
-                    )}
-
-                    {darkMode && (
-                      <motion.svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#FFFFFF"
-                        strokeWidth="2"
-                        initial={{ scale: 0, rotate: 180 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        exit={{ scale: 0, rotate: -180 }}
-                      >
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                      </motion.svg>
-                    )}
+                    <AnimatePresence mode="wait">
+                      {darkMode ? (
+                        <motion.svg
+                          key="moon"
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="#FFFFFF"
+                          initial={{ rotate: -90, opacity: 0 }}
+                          animate={{ rotate: 0, opacity: 1 }}
+                          exit={{ rotate: 90, opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </motion.svg>
+                      ) : (
+                        <motion.svg
+                          key="sun"
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#FFFFFF"
+                          strokeWidth="2.5"
+                          initial={{ rotate: 90, opacity: 0 }}
+                          animate={{ rotate: 0, opacity: 1 }}
+                          exit={{ rotate: -90, opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <circle cx="12" cy="12" r="4"/>
+                          <line x1="12" y1="1" x2="12" y2="3"/>
+                          <line x1="12" y1="21" x2="12" y2="23"/>
+                          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                          <line x1="1" y1="12" x2="3" y2="12"/>
+                          <line x1="21" y1="12" x2="23" y2="12"/>
+                          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </motion.svg>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
 
+                  {/* Background glow */}
                   <motion.div
-                    className="absolute inset-0 rounded-full"
+                    className="absolute inset-0 rounded-full blur-sm"
+                    style={{
+                      background: darkMode
+                        ? 'radial-gradient(circle, rgba(255, 0, 0, 0.4) 0%, transparent 70%)'
+                        : 'radial-gradient(circle, rgba(220, 38, 38, 0.3) 0%, transparent 70%)',
+                    }}
                     animate={{
-                      boxShadow: darkMode
-                        ? ['0 0 10px rgba(255, 0, 0, 0.3)', '0 0 20px rgba(255, 0, 0, 0.5)', '0 0 10px rgba(255, 0, 0, 0.3)']
-                        : ['0 0 10px rgba(0, 0, 0, 0.1)', '0 0 15px rgba(0, 0, 0, 0.15)', '0 0 10px rgba(0, 0, 0, 0.1)']
+                      opacity: [0.5, 0.8, 0.5],
                     }}
                     transition={{
                       duration: 2,
@@ -346,51 +389,31 @@ const Navbar = ({ darkMode, toggleDarkMode }: NavbarProps) => {
                   />
                 </motion.button>
 
-                {/* Enhanced Mobile Menu Button */}
+                {/* ✨ REDESIGNED MOBILE MENU BUTTON */}
                 <motion.button
-                  onClick={() => setIsOpen(!isOpen)}
-                  className="md:hidden relative w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden"
+                  onClick={handleMenuToggle}
+                  className="md:hidden relative w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden"
                   style={{
                     background: darkMode
-                      ? 'linear-gradient(135deg, #3D0000 0%, #1a0000 100%)'
-                      : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                      ? 'linear-gradient(135deg, #1a0000 0%, #000000 100%)'
+                      : 'linear-gradient(135deg, #fecaca 0%, #fee2e2 100%)',
+                    border: `2px solid ${darkMode ? '#FF0000' : '#dc2626'}`,
                     boxShadow: isOpen 
-                      ? '0 0 30px rgba(255, 0, 0, 0.5)'
-                      : '0 4px 15px rgba(0, 0, 0, 0.1)',
+                      ? '0 0 20px rgba(255, 0, 0, 0.5)'
+                      : '0 2px 10px rgba(0, 0, 0, 0.1)',
                   }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  animate={{
-                    rotate: isOpen ? 180 : 0,
-                  }}
-                  transition={{ duration: 0.5 }}
                 >
-                  {/* Animated background pulse */}
-                  <motion.div
-                    className="absolute inset-0"
-                    style={{
-                      background: 'radial-gradient(circle, rgba(255, 0, 0, 0.3) 0%, transparent 70%)',
-                    }}
-                    animate={{
-                      scale: isOpen ? [1, 1.5, 1] : 1,
-                      opacity: isOpen ? [0.5, 0, 0.5] : 0,
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: isOpen ? Infinity : 0,
-                    }}
-                  />
-
-                  <div className="w-7 h-6 flex flex-col justify-around relative z-10">
+                  <div className="w-6 h-5 flex flex-col justify-around relative z-10">
                     <motion.span
-                      className="w-full h-0.5 rounded-full"
+                      className="w-full h-0.5 rounded-full origin-center"
                       style={{ backgroundColor: '#FF0000' }}
                       animate={{
                         rotate: isOpen ? 45 : 0,
-                        y: isOpen ? 11 : 0,
-                        scaleX: isOpen ? 1 : 1,
+                        y: isOpen ? 8 : 0,
                       }}
-                      transition={{ duration: 0.3 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
                     />
                     <motion.span
                       className="w-full h-0.5 rounded-full"
@@ -402,16 +425,33 @@ const Navbar = ({ darkMode, toggleDarkMode }: NavbarProps) => {
                       transition={{ duration: 0.2 }}
                     />
                     <motion.span
-                      className="w-full h-0.5 rounded-full"
+                      className="w-full h-0.5 rounded-full origin-center"
                       style={{ backgroundColor: '#FF0000' }}
                       animate={{
                         rotate: isOpen ? -45 : 0,
-                        y: isOpen ? -11 : 0,
-                        scaleX: isOpen ? 1 : 1,
+                        y: isOpen ? -8 : 0,
                       }}
-                      transition={{ duration: 0.3 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
                     />
                   </div>
+
+                  {/* Pulse effect when open */}
+                  {isOpen && (
+                    <motion.div
+                      className="absolute inset-0 rounded-xl"
+                      style={{
+                        background: 'radial-gradient(circle, rgba(255, 0, 0, 0.3) 0%, transparent 70%)',
+                      }}
+                      animate={{
+                        scale: [1, 1.3, 1],
+                        opacity: [0.5, 0, 0.5],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                      }}
+                    />
+                  )}
                 </motion.button>
               </div>
             </div>
@@ -432,328 +472,273 @@ const Navbar = ({ darkMode, toggleDarkMode }: NavbarProps) => {
         />
       </motion.nav>
 
-      {/* PREMIUM MOBILE MENU - COMPLETELY REDESIGNED */}
+      {/* ✨ REDESIGNED MOBILE MENU */}
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Enhanced Backdrop with Radial Gradient */}
+            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
+              transition={{ duration: 0.3 }}
               className="fixed inset-0 z-40 md:hidden"
               style={{
                 background: darkMode 
-                  ? 'radial-gradient(circle at top right, rgba(61, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.95) 100%)'
-                  : 'radial-gradient(circle at top right, rgba(254, 226, 226, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%)',
-                backdropFilter: 'blur(20px)',
+                  ? 'rgba(0, 0, 0, 0.95)'
+                  : 'rgba(0, 0, 0, 0.7)',
+                backdropFilter: 'blur(10px)',
               }}
-              onClick={() => setIsOpen(false)}
-            >
-              {/* Animated particles in background */}
-              {[...Array(20)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-1 h-1 rounded-full"
-                  style={{
-                    backgroundColor: darkMode ? 'rgba(255, 0, 0, 0.3)' : 'rgba(255, 0, 0, 0.2)',
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                  }}
-                  animate={{
-                    y: [0, -30, 0],
-                    opacity: [0.2, 0.8, 0.2],
-                  }}
-                  transition={{
-                    duration: 3 + Math.random() * 2,
-                    repeat: Infinity,
-                    delay: Math.random() * 2,
-                  }}
-                />
-              ))}
-            </motion.div>
+              onClick={handleMenuClose}
+            />
 
-            {/* Premium Full-Screen Menu */}
+            {/* Mobile Menu Panel - Slide from Right */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed inset-0 z-50 md:hidden flex items-center justify-center p-6"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed right-0 top-0 bottom-0 w-80 z-50 md:hidden"
+              style={{
+                background: darkMode
+                  ? 'linear-gradient(135deg, #0a0a0a 0%, #1a0000 100%)'
+                  : 'linear-gradient(135deg, #ffffff 0%, #fef2f2 100%)',
+                boxShadow: '-10px 0 50px rgba(0, 0, 0, 0.5)',
+              }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="relative w-full max-w-md">
-                
-                {/* Glowing border effect */}
-                <motion.div
-                  className="absolute -inset-1 rounded-3xl blur-xl"
-                  style={{
-                    background: 'linear-gradient(135deg, #FF0000 0%, #3D0000 100%)',
-                    opacity: 0.3,
-                  }}
-                  animate={{
-                    opacity: [0.3, 0.5, 0.3],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                  }}
-                />
+              {/* Red accent border */}
+              <div 
+                className="absolute left-0 top-0 bottom-0 w-1"
+                style={{
+                  background: 'linear-gradient(180deg, #FF0000 0%, #8B0000 100%)',
+                }}
+              />
 
-                {/* Main menu container */}
-                <motion.div
-                  className="relative rounded-3xl overflow-hidden"
-                  style={{
-                    background: darkMode
-                      ? 'linear-gradient(135deg, rgba(0, 0, 0, 0.98) 0%, rgba(26, 0, 0, 0.98) 100%)'
-                      : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 245, 245, 0.98) 100%)',
-                    backdropFilter: 'blur(40px)',
-                    boxShadow: darkMode
-                      ? '0 25px 80px rgba(255, 0, 0, 0.3)'
-                      : '0 25px 80px rgba(0, 0, 0, 0.2)',
-                  }}
-                >
-                  {/* Top decorative wave */}
-                  <div className="absolute top-0 left-0 right-0 h-2"
-                    style={{
-                      background: 'linear-gradient(90deg, #FF0000 0%, #3D0000 50%, #FF0000 100%)',
-                    }}
-                  />
-
-                  {/* Header Section */}
-                  <div className="relative p-8 pb-6">
-                    <motion.div
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="text-center"
+              {/* Header */}
+              <div className="p-6 border-b" style={{ borderColor: darkMode ? '#3D0000' : '#fee2e2' }}>
+                <div className="flex items-center justify-between mb-4">
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    <h2 
+                      className="text-2xl font-black"
+                      style={{
+                        background: 'linear-gradient(135deg, #FF0000 0%, #8B0000 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        backgroundClip: 'text',
+                      }}
                     >
-                      <h2 className="text-3xl font-black mb-2"
+                      Menu
+                    </h2>
+                    <p 
+                      className="text-xs mt-1"
+                      style={{ color: darkMode ? '#666' : '#999' }}
+                    >
+                      Navigate to section
+                    </p>
+                  </motion.div>
+
+                  <motion.button
+                    onClick={handleMenuClose}
+                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    style={{
+                      background: darkMode
+                        ? 'linear-gradient(135deg, #1a0000 0%, #000000 100%)'
+                        : 'linear-gradient(135deg, #fecaca 0%, #fee2e2 100%)',
+                      border: `2px solid ${darkMode ? '#FF0000' : '#dc2626'}`,
+                    }}
+                    whileHover={{ scale: 1.1, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                    initial={{ opacity: 0, rotate: -90 }}
+                    animate={{ opacity: 1, rotate: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF0000" strokeWidth="2.5">
+                      <line x1="18" y1="6" x2="6" y2="18"/>
+                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Navigation Items */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-2">
+                {NAV_ITEMS.map((item, index) => {
+                  const IconComponent = item.icon
+                  return (
+                    <motion.a
+                      key={item.name}
+                      href={`#${item.name.toLowerCase()}`}
+                      className="block group"
+                      onClick={handleMenuClose}
+                      initial={{ opacity: 0, x: 50 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ 
+                        delay: 0.1 + index * 0.05,
+                        type: "spring",
+                        stiffness: 200
+                      }}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onMouseLeave={() => setActiveIndex(null)}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div
+                        className="relative rounded-xl p-4 overflow-hidden transition-all duration-300"
                         style={{
-                          background: 'linear-gradient(135deg, #FF0000 0%, #8B0000 100%)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          backgroundClip: 'text',
+                          background: activeIndex === index
+                            ? darkMode
+                              ? 'linear-gradient(135deg, #1a0000 0%, #000000 100%)'
+                              : 'linear-gradient(135deg, #fecaca 0%, #fee2e2 100%)'
+                            : 'transparent',
+                          border: `2px solid ${
+                            activeIndex === index 
+                              ? '#FF0000' 
+                              : 'transparent'
+                          }`,
                         }}
                       >
-                        Navigation
-                      </h2>
-                      <p className="text-sm"
-                        style={{ color: darkMode ? '#888' : '#666' }}
-                      >
-                        Choose your destination
-                      </p>
-                    </motion.div>
-
-                    {/* Close button */}
-                    <motion.button
-                      onClick={() => setIsOpen(false)}
-                      className="absolute top-6 right-6 w-10 h-10 rounded-full flex items-center justify-center"
-                      style={{
-                        background: darkMode
-                          ? 'linear-gradient(135deg, #3D0000 0%, #1a0000 100%)'
-                          : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-                      }}
-                      whileHover={{ scale: 1.1, rotate: 90 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF0000" strokeWidth="2">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                      </svg>
-                    </motion.button>
-                  </div>
-
-                  {/* Navigation Items - Premium Cards */}
-                  <div className="px-6 pb-6 space-y-3 max-h-[60vh] overflow-y-auto">
-                    {navItems.map((item, index) => {
-                      const IconComponent = item.icon
-                      return (
-                        <motion.a
-                          key={item.name}
-                          href={`#${item.name.toLowerCase()}`}
-                          className="relative block group"
-                          onClick={() => setIsOpen(false)}
-                          initial={{ opacity: 0, x: -50 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ 
-                            delay: 0.3 + index * 0.1,
-                            type: "spring",
-                            stiffness: 100
-                          }}
-                          onMouseEnter={() => setActiveIndex(index)}
-                          onMouseLeave={() => setActiveIndex(null)}
-                          whileTap={{ scale: 0.98 }}
-                        >
+                        <div className="flex items-center space-x-4">
+                          {/* Number Badge */}
                           <motion.div
-                            className="relative rounded-2xl p-5 overflow-hidden"
+                            className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0"
                             style={{
-                              background: darkMode
-                                ? activeIndex === index
-                                  ? 'linear-gradient(135deg, #3D0000 0%, #1a0000 100%)'
-                                  : 'rgba(61, 0, 0, 0.2)'
-                                : activeIndex === index
-                                  ? 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)'
-                                  : 'rgba(254, 226, 226, 0.3)',
-                              border: `2px solid ${activeIndex === index ? '#FF0000' : 'transparent'}`,
-                              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                              boxShadow: activeIndex === index
-                                ? '0 10px 40px rgba(255, 0, 0, 0.3)'
-                                : '0 4px 15px rgba(0, 0, 0, 0.1)',
+                              background: activeIndex === index
+                                ? 'linear-gradient(135deg, #FF0000 0%, #8B0000 100%)'
+                                : darkMode 
+                                  ? 'rgba(255, 0, 0, 0.1)' 
+                                  : 'rgba(220, 38, 38, 0.1)',
+                              color: activeIndex === index ? '#FFFFFF' : '#FF0000',
                             }}
+                            animate={{
+                              scale: activeIndex === index ? [1, 1.1, 1] : 1,
+                            }}
+                            transition={{ duration: 0.3 }}
                           >
-                            {/* Number badge */}
-                            <motion.div
-                              className="absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center text-xs font-black"
-                              style={{
-                                background: activeIndex === index
-                                  ? 'linear-gradient(135deg, #FF0000 0%, #8B0000 100%)'
-                                  : darkMode ? 'rgba(255, 0, 0, 0.2)' : 'rgba(255, 0, 0, 0.15)',
-                                color: activeIndex === index ? '#FFFFFF' : '#FF0000',
-                              }}
-                              animate={{
-                                scale: activeIndex === index ? [1, 1.1, 1] : 1,
-                                rotate: activeIndex === index ? [0, 10, -10, 0] : 0,
-                              }}
-                              transition={{ duration: 0.5 }}
-                            >
-                              {item.number}
-                            </motion.div>
+                            {item.number}
+                          </motion.div>
 
-                            {/* Icon and content */}
-                            <div className="flex items-center space-x-4">
-                              {/* Icon container */}
+                          {/* Content */}
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-1">
                               <motion.div
-                                className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
-                                style={{
-                                  background: activeIndex === index
-                                    ? 'linear-gradient(135deg, #FF0000 0%, #8B0000 100%)'
-                                    : darkMode ? 'rgba(255, 0, 0, 0.2)' : 'rgba(255, 0, 0, 0.15)',
-                                  color: activeIndex === index ? '#FFFFFF' : '#FF0000',
-                                }}
                                 animate={{
-                                  scale: activeIndex === index ? 1.1 : 1,
-                                  rotate: activeIndex === index ? [0, 5, -5, 0] : 0,
+                                  color: activeIndex === index ? '#FF0000' : darkMode ? '#E5E5E5' : '#1F2937',
                                 }}
-                                transition={{ duration: 0.5 }}
+                                transition={{ duration: 0.2 }}
                               >
                                 <IconComponent />
                               </motion.div>
-
-                              {/* Text content */}
-                              <div className="flex-1">
-                                <motion.h3
-                                  className="text-xl font-bold mb-1"
-                                  animate={{
-                                    color: activeIndex === index 
-                                      ? '#FF0000'
-                                      : darkMode ? '#E5E5E5' : '#1F2937',
-                                  }}
-                                  transition={{ duration: 0.3 }}
-                                >
-                                  {item.name}
-                                </motion.h3>
-                                <motion.p
-                                  className="text-sm"
-                                  style={{ 
-                                    color: darkMode ? '#888' : '#666',
-                                    opacity: activeIndex === index ? 1 : 0.7,
-                                  }}
-                                  transition={{ duration: 0.3 }}
-                                >
-                                  View {item.name.toLowerCase()} section
-                                </motion.p>
-                              </div>
-
-                              {/* Arrow indicator */}
-                              <motion.div
-                                animate={{
-                                  x: activeIndex === index ? 5 : 0,
-                                  opacity: activeIndex === index ? 1 : 0.3,
-                                }}
-                                transition={{ duration: 0.3 }}
-                              >
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF0000" strokeWidth="2">
-                                  <line x1="5" y1="12" x2="19" y2="12"/>
-                                  <polyline points="12 5 19 12 12 19"/>
-                                </svg>
-                              </motion.div>
-                            </div>
-
-                            {/* Animated shine effect */}
-                            {activeIndex === index && (
-                              <motion.div
-                                className="absolute inset-0 opacity-20"
+                              <h3
+                                className="text-lg font-bold"
                                 style={{
-                                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent)',
+                                  color: activeIndex === index 
+                                    ? '#FF0000'
+                                    : darkMode ? '#E5E5E5' : '#1F2937',
                                 }}
-                                animate={{
-                                  x: [-100, 300],
-                                }}
-                                transition={{
-                                  duration: 1.5,
-                                  repeat: Infinity,
-                                  repeatDelay: 1,
-                                }}
-                              />
-                            )}
-                          </motion.div>
-                        </motion.a>
-                      )
-                    })}
-                  </div>
+                              >
+                                {item.name}
+                              </h3>
+                            </div>
+                            <p
+                              className="text-xs"
+                              style={{ 
+                                color: darkMode ? '#666' : '#999',
+                                opacity: activeIndex === index ? 1 : 0.7,
+                              }}
+                            >
+                              Go to {item.name.toLowerCase()}
+                            </p>
+                          </div>
 
-                  {/* Footer Section - Social & Info */}
-                  <motion.div
-                    className="border-t p-6"
-                    style={{
-                      borderColor: darkMode ? '#3D0000' : '#fee2e2',
-                    }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.9 }}
-                  >
-                    <p className="text-xs text-center mb-4"
-                      style={{ color: darkMode ? '#666' : '#888' }}
-                    >
-                      Let's connect and create something amazing
-                    </p>
-                    
-                    <div className="flex justify-center space-x-3">
-                      {[
-                        { name: 'GitHub', icon: 'GH', url: '#' },
-                        { name: 'LinkedIn', icon: 'IN', url: '#' },
-                        { name: 'Twitter', icon: 'TW', url: '#' },
-                        { name: 'Email', icon: '@', url: '#' }
-                      ].map((social, i) => (
-                        <motion.a
-                          key={social.name}
-                          href={social.url}
-                          className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-black"
-                          style={{
-                            background: darkMode
-                              ? 'linear-gradient(135deg, #3D0000 0%, #1a0000 100%)'
-                              : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-                            color: '#FF0000',
-                          }}
-                          whileHover={{ 
-                            scale: 1.15,
-                            rotate: [0, -10, 10, 0],
-                            boxShadow: '0 10px 30px rgba(255, 0, 0, 0.4)',
-                          }}
-                          whileTap={{ scale: 0.9 }}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 1 + i * 0.1 }}
-                        >
-                          {social.icon}
-                        </motion.a>
-                      ))}
-                    </div>
-                  </motion.div>
-                </motion.div>
+                          {/* Arrow */}
+                          <motion.div
+                            animate={{
+                              x: activeIndex === index ? 5 : 0,
+                              opacity: activeIndex === index ? 1 : 0.3,
+                            }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF0000" strokeWidth="2">
+                              <line x1="5" y1="12" x2="19" y2="12"/>
+                              <polyline points="12 5 19 12 12 19"/>
+                            </svg>
+                          </motion.div>
+                        </div>
+
+                        {/* Shine effect */}
+                        {activeIndex === index && (
+                          <motion.div
+                            className="absolute inset-0 opacity-20 pointer-events-none"
+                            style={{
+                              background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent)',
+                            }}
+                            animate={{
+                              x: [-100, 300],
+                            }}
+                            transition={{
+                              duration: 1,
+                              repeat: Infinity,
+                              repeatDelay: 1,
+                            }}
+                          />
+                        )}
+                      </div>
+                    </motion.a>
+                  )
+                })}
               </div>
+
+              {/* Footer */}
+              <motion.div
+                className="p-6 border-t"
+                style={{ borderColor: darkMode ? '#3D0000' : '#fee2e2' }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <p 
+                  className="text-xs text-center mb-3"
+                  style={{ color: darkMode ? '#666' : '#999' }}
+                >
+                  Connect with me
+                </p>
+                
+                <div className="flex justify-center space-x-2">
+                  {[
+                    { name: 'GitHub', icon: 'GH', url: '#' },
+                    { name: 'LinkedIn', icon: 'IN', url: '#' },
+                    { name: 'Twitter', icon: 'X', url: '#' },
+                    { name: 'Email', icon: '@', url: '#' }
+                  ].map((social, i) => (
+                    <motion.a
+                      key={social.name}
+                      href={social.url}
+                      className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-black"
+                      style={{
+                        background: darkMode
+                          ? 'linear-gradient(135deg, #1a0000 0%, #000000 100%)'
+                          : 'linear-gradient(135deg, #fecaca 0%, #fee2e2 100%)',
+                        border: `2px solid ${darkMode ? '#FF0000' : '#dc2626'}`,
+                        color: '#FF0000',
+                      }}
+                      whileHover={{ 
+                        scale: 1.15,
+                        boxShadow: '0 5px 20px rgba(255, 0, 0, 0.4)',
+                      }}
+                      whileTap={{ scale: 0.9 }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 + i * 0.05 }}
+                    >
+                      {social.icon}
+                    </motion.a>
+                  ))}
+                </div>
+              </motion.div>
             </motion.div>
           </>
         )}
