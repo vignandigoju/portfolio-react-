@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Force custom color classes to exist */
+@layer utilities {
+  .bg-brand-black {
+    background-color: #000000 !important;
+  }
+  
+  .bg-brand-dark-red {
+    background-color: #3D0000 !important;
+  }
+  
+  .bg-brand-red {
+    background-color: #FF0000 !important;
+  }
+  
+  .text-brand-black {
+    color: #000000 !important;
+  }
+  
+  .text-brand-dark-red {
+    color: #3D0000 !important;
+  }
+  
+  .text-brand-red {
+    color: #FF0000 !important;
+  }
+  
+  .border-brand-red {
+    border-color: #FF0000 !important;
+  }
+  
+  .border-brand-dark-red {
+    border-color: #3D0000 !important;
+  }
+
+  /* Hover states */
+  .hover\:bg-brand-dark-red:hover {
+    background-color: #3D0000 !important;
+  }
+  
+  .hover\:bg-brand-red:hover {
+    background-color: #FF0000 !important;
+  }
+}

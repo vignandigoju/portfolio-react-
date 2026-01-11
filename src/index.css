@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Define color variables */
+:root {
+  --brand-black: #000000;
+  --brand-dark-red: #3D0000;
+  --brand-red: #FF0000;
+}
+
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom utility classes using variables */
+.bg-brand-black {
+  background-color: var(--brand-black);
+}
+
+.bg-brand-dark-red {
+  background-color: var(--brand-dark-red);
+}
+
+.bg-brand-red {
+  background-color: var(--brand-red);
+}
+
+.text-brand-black {
+  color: var(--brand-black);
+}
+
+.text-brand-dark-red {
+  color: var(--brand-dark-red);
+}
+
+.text-brand-red {
+  color: var(--brand-red);
+}
+
+.border-brand-red {
+  border-color: var(--brand-red);
+}
+
+.border-brand-dark-red {
+  border-color: var(--brand-dark-red);
+}
+
+/* Hover states */
+.hover\:bg-brand-dark-red:hover {
+  background-color: var(--brand-dark-red);
+}
+
+.hover\:bg-brand-red:hover {
+  background-color: var(--brand-red);
+}
+
+.hover\:text-white:hover {
+  color: white;
+}
+
+/* Ensure these classes have high specificity */
+.force-brand-black {
+  background-color: #000000 !important;
+}
+
+.force-brand-dark-red {
+  background-color: #3D0000 !important;
+}
+
+.force-brand-red {
+  background-color: #FF0000 !important;
+}
